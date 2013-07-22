@@ -1,3 +1,10 @@
+Status
+======
+
+This is a *spike* to learn Storm and how to integrate it with Jython and other tech. For now, that means no testing
+and minimal docs.
+
+
 Setup
 =====
 
