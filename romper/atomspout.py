@@ -44,14 +44,12 @@ class AtomSpout(BaseRichSpout):
         # FIXME update last_id per feed in ZK
 
         # FIXME low pri, but should make configurable
-        # Also, in the event of lengthy disconnect we may also see rate limiting
+        # Also, in the event of lengthy disconnect we may also see the need for rate limiting
+        # as we reconnect
         time.sleep(1.)
 
     def declareOutputFields(self, declarer):
         declarer.declare(Fields(["ts", "event"]))
-
-
-# NOTE keep this as a distinct, testable piece of code
 
 
 class SeenWindow(object):
@@ -66,7 +64,7 @@ class SeenWindow(object):
         self.seen.add(item)
         self.purgeq.append(item)
         if len(self.purgeq) > self.window:
-            old = self.purgeq.popLeft()
+            old = self.purgeq.popleft()
             self.seen.remove(old)
 
     def __contains__(self, item):
@@ -74,24 +72,27 @@ class SeenWindow(object):
 
 
 class AtomReader(object):
+    # Note that we want to keep distinct from AtomSpout to simplify
+    # testing and possibly reuse
 
-    def __init__(self, feed_url, read_back_pages=200, last_id=None):
+    def __init__(self, feed_url, read_back=200, last_id=None):
         self.feed_url = feed_url
-        self.read_back_pages = read_back_pages
+        self.read_back = read_back
         self.last_id = last_id
         self.parser = Abdera().getParser()
         self.seen = SeenWindow()
         self.last_updated = None
         self.total_events = 0
-        self.log = LoggerFactory.getLogger(AtomReader)
+        self.log = LoggerFactory.getLogger(AtomReader.__class__)
 
     def _read_pages(self):
-        """Reads pages from the feed, from newest to oldest (reverse chronology)"""
-        page_count = 0
+        """Reads pages from the feed, from newest to oldest (reverse chronology),
+           up to `read_back` events"""
+        count = 0
         url = self.feed_url
-        while page_count < self.read_back_pages:  # FIXME what if we exhaust our pages?
+        while count < self.read_back:  # FIXME what if we exhaust our pages?
             with closing(URL(url).openStream()) as f:
-                self.log.debug("Reading feed: {}", url)
+                self.log.info("Reading feed: {}", url)
                 doc = self.parser.parse(f)
                 feed = doc.getRoot()
                 url = str(feed.getLinks("next")[0].href)
@@ -99,7 +100,7 @@ class AtomReader(object):
                     if self.last_id == entry.id:
                         return  # done given read back to last_id
                     yield entry
-                    page_count += 1
+                    count += 1
 
     def read_events(self):
         """Deliver events from oldest to newest, with some minimal sanity checking"""
@@ -107,10 +108,10 @@ class AtomReader(object):
         for event in reversed(list(self._read_pages())):
             if self.last_updated and event.updated < self.last_updated:
                 self.log.warn("Ignoring out of order event in feed {}: {} ({}) is older than previous event {}",
-                         self.feed_url, event.id, event.updated, self.last_updated)
+                         [self.feed_url, event.id, event.updated, self.last_updated])
                 continue
             if event.id in self.seen:
-                self.log.warn("Ignoring duplicated event in feed {}: {}", self.feed_url, event.id)
+                self.log.warn("Ignoring duplicated event in feed {}: {}", [self.feed_url, event.id])
                 continue
             self.last_updated = event.updated
             self.seen.add(event.id)
@@ -120,4 +121,4 @@ class AtomReader(object):
 
         # FIXME storm supports metrics. use that functionality.
         self.total_events += count
-        self.log.debug("Read {} of {} events from feed {}", count, self.total_events, self.feed_url)
+        self.log.info("Read {} of {} events so far from feed {}", [count, self.total_events, self.feed_url])
