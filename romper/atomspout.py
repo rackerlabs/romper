@@ -70,6 +70,9 @@ class SeenWindow(object):
     def __contains__(self, item):
         return item in self.seen
 
+    def __len__(self):
+        return len(self.seen)
+
 
 class AtomReader(object):
     # Note that we want to keep distinct from AtomSpout to simplify
@@ -90,7 +93,7 @@ class AtomReader(object):
            up to `read_back` events"""
         count = 0
         url = self.feed_url
-        while count < self.read_back:  # FIXME what if we exhaust our pages?
+        while count < self.read_back:
             with closing(URL(url).openStream()) as f:
                 self.log.info("Reading feed: {}", url)
                 doc = self.parser.parse(f)
@@ -98,7 +101,7 @@ class AtomReader(object):
                 url = str(feed.getLinks("next")[0].href)
                 for entry in feed.entries:
                     if self.last_id == entry.id:
-                        return  # done given read back to last_id
+                        return  # done, given read back to last_id
                     yield entry
                     count += 1
 
@@ -119,6 +122,6 @@ class AtomReader(object):
             count += 1
             yield event
 
-        # FIXME storm supports metrics. use that functionality.
+        # FIXME storm supports custom metrics. use that functionality.
         self.total_events += count
         self.log.info("Read {} of {} events so far from feed {}", [count, self.total_events, self.feed_url])
