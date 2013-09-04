@@ -12,12 +12,12 @@ This will be replaced by a much better setup. But for now:
 
 You need Storm installed with its bin directory on `$PATH`.
 
-Checkout the proxymaker branch of Jython and build it. It includes a necessary fix for using Jython with Clojure types, as used in Storm, in Jython trunk, as well as new custom proxy maker support for better Java integration.
+Checkout Jython trunk and build it. It includes a necessary fix for using Jython with Clojure types as well as new custom proxy maker support for better Java integration.
 
 
 ~~~~
-$ hg clone ssh://hg@bitbucket.org/jimbaker/proxymaker
-$ cd proxymaker 
+$ hg clone http://hg.python.org/jython jython27
+$ cd jython27 
 $ ant                                                 # build development version (fastest way)
 $ export PATH=$(pwd)/dist/bin:$PATH                   # add jython to your path
 ~~~~
