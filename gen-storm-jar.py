@@ -14,11 +14,14 @@ import tempfile
 
 from clamp import SerializableProxies
 
+def jython_path(inside):
+    jython_path = os.path.normpath(os.path.join(sys.executable, '../../'))
+    return os.path.join(jython_path, inside)
 
 def find_jython_jars():
     # Uses the same classpath resolution as bin/jython
-    jython_jar_path = os.path.normpath(os.path.join(sys.executable, "../../jython.jar"))
-    jython_jar_dev_path = os.path.normpath(os.path.join(sys.executable, "../../jython-dev.jar"))
+    jython_jar_path = jython_path("jython.jar")
+    jython_jar_dev_path = jython_path("jython-dev.jar")
     if os.path.exists(jython_jar_dev_path):
         jars = [jython_jar_dev_path]
         jars.extend(glob.glob(os.path.normpath(os.path.join(jython_jar_dev_path, "../javalib/*.jar"))))
@@ -45,7 +48,7 @@ def explode_jars(jars, tempdir):
 def main():
     parser = argparse.ArgumentParser(description="Generate a single jar for Storm")
     parser.add_argument("--include", "-i", help="Include this Python library (in addition to stdlib)",
-                        dest="includes", action="append", default=[os.path.join(sys.executable, "../../Lib")])
+                        dest="includes", action="append", default=[jython_path("Lib")])
     parser.add_argument("--proxy", help="Generate proxies for this Python module", dest="proxies", action="append", default=[])
     parser.add_argument("--jar", help="Jar file to include", dest="jars", action="append", default=[])
     parser.add_argument("--output", "-o", help="Name of output jar", default="uber.jar")
