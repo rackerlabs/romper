@@ -9,7 +9,7 @@ from backtype.storm.topology import TopologyBuilder
 from backtype.storm.topology.base import BaseRichBolt, BaseRichSpout
 from backtype.storm.tuple import Fields, Values
 
-from clamp import PackageProxy
+from clamp import ClampProxyMaker
 from romper.policy import Policy
 
 
@@ -19,13 +19,6 @@ logging.basicConfig(
 )
 log = logging.getLogger("topology")
 
-
-# FIXME how to do integration testing? presumably should mock
-# something. or maybe not, considering how thin this layer should be.
-
-# FIXME must fix pip/easy_install
-
-# FIXME add a class decorator to add package proxy? or do this in a metaclass? just want to remove extra code here...
 
 server_cpu = {
     "foo": [0.88, 0.99],
@@ -59,7 +52,7 @@ def is_tick_tuple(t):
 
 class MonitoringSpout(BaseRichSpout):
 
-    __proxymaker__ = PackageProxy("otter")
+    __proxymaker__ = ClampProxyMaker("otter")
 
     def open(self, conf, context, collector):
         self._collector = collector
@@ -79,7 +72,7 @@ class MonitoringSpout(BaseRichSpout):
 
 
 class SchedulerSpout(BaseRichSpout):
-    __proxymaker__ = PackageProxy("otter")
+    __proxymaker__ = ClampProxyMaker("otter")
 
     def open(self, conf, context, collector):
         self._collector = collector
@@ -99,7 +92,7 @@ class SchedulerSpout(BaseRichSpout):
 
 class LookupASGBolt(BaseRichBolt):
 
-    __proxymaker__ = PackageProxy("otter")
+    __proxymaker__ = ClampProxyMaker("otter")
 
     def prepare(self, conf, context, collector):
         self._collector = collector
@@ -119,7 +112,7 @@ class PolicyBolt(BaseRichBolt):
     # There must only be at most one instance per ASG; ensure by
     # configuring properly in the topology using FieldsGrouping.
 
-    __proxymaker__ = PackageProxy("otter")
+    __proxymaker__ = ClampProxyMaker("otter")
 
     def prepare(self, conf, context, collector):
         self._collector = collector
@@ -155,7 +148,7 @@ class PolicyBolt(BaseRichBolt):
 
 class LogPolicyBolt(BaseRichBolt):
 
-    __proxymaker__ = PackageProxy("otter")
+    __proxymaker__ = ClampProxyMaker("otter")
 
     def prepare(self, conf, context, collector):
         self._collector = collector
