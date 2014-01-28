@@ -9,5 +9,7 @@ setup(
     version = "0.1",
     packages = find_packages(),
     install_requires = ["clamp>=0.2"],
-    clamp = ["romper.topology"],
+    clamp = {
+        "modules": ["romper.topology"],
+    }
 )
