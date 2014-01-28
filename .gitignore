@@ -2,3 +2,7 @@
 *.class
 *.jar
 *.log
+build/
+dist/
+*.egg-info/
+*~
