@@ -40,7 +40,7 @@ $ popd
 $ git clone https://github.com/rackerlabs/romper.git
 $ pushd romper
 $ jython-ssl setup.py install
-$ CLASSPATH=$(storm classpath) jython-ssl setup.py build_jar  # we will combine this with install in a future version of clamp
+$ CLASSPATH=$(storm classpath) jython-ssl setup.py clamp      # create proxy in site-packages
 $ CLASSPATH=$(storm classpath) jython-ssl setup.py singlejar  # defaults to romper-0.1-single.jar
 ````
 
