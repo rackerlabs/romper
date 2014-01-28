@@ -9,7 +9,7 @@ from backtype.storm.topology import TopologyBuilder
 from backtype.storm.topology.base import BaseRichBolt, BaseRichSpout
 from backtype.storm.tuple import Fields, Values
 
-from clamp import ClampProxyMaker
+from clamp import clamp_base
 from romper.policy import Policy
 
 
@@ -18,6 +18,9 @@ logging.basicConfig(
     format="%(process)d %(threadName)s %(asctime)s %(funcName)s %(message)s"
 )
 log = logging.getLogger("topology")
+
+
+OtterBase = clamp_base("otter")
 
 
 server_cpu = {
@@ -50,9 +53,7 @@ def is_tick_tuple(t):
         t.getSourceStreamId() == Constants.SYSTEM_TICK_STREAM_ID
 
 
-class MonitoringSpout(BaseRichSpout):
-
-    __proxymaker__ = ClampProxyMaker("otter")
+class MonitoringSpout(BaseRichSpout, OtterBase):
 
     def open(self, conf, context, collector):
         self._collector = collector
@@ -71,8 +72,7 @@ class MonitoringSpout(BaseRichSpout):
         declarer.declare(Fields(["ts", "server", "payload"]))
 
 
-class SchedulerSpout(BaseRichSpout):
-    __proxymaker__ = ClampProxyMaker("otter")
+class SchedulerSpout(BaseRichSpout, OtterBase):
 
     def open(self, conf, context, collector):
         self._collector = collector
@@ -90,9 +90,7 @@ class SchedulerSpout(BaseRichSpout):
         declarer.declare(Fields(["ts", "server", "payload", "asg"]))   # server will be None
 
 
-class LookupASGBolt(BaseRichBolt):
-
-    __proxymaker__ = ClampProxyMaker("otter")
+class LookupASGBolt(BaseRichBolt, OtterBase):
 
     def prepare(self, conf, context, collector):
         self._collector = collector
@@ -107,12 +105,10 @@ class LookupASGBolt(BaseRichBolt):
         declarer.declare(Fields(["ts", "server", "payload", "asg"]))
 
 
-class PolicyBolt(BaseRichBolt):
+class PolicyBolt(BaseRichBolt, OtterBase):
 
     # There must only be at most one instance per ASG; ensure by
     # configuring properly in the topology using FieldsGrouping.
-
-    __proxymaker__ = ClampProxyMaker("otter")
 
     def prepare(self, conf, context, collector):
         self._collector = collector
@@ -146,9 +142,7 @@ class PolicyBolt(BaseRichBolt):
         return { Config.TOPOLOGY_TICK_TUPLE_FREQ_SECS: 5 }
 
 
-class LogPolicyBolt(BaseRichBolt):
-
-    __proxymaker__ = ClampProxyMaker("otter")
+class LogPolicyBolt(BaseRichBolt, OtterBase):
 
     def prepare(self, conf, context, collector):
         self._collector = collector
