@@ -1,4 +1,4 @@
-import logging  # FIXME replace with log4j (or twiggy if that makes sense)
+import logging  # FIXME should work with slf4j, ideally through some shim
 import random
 import time
 from collections import defaultdict
@@ -41,8 +41,6 @@ for asg in server_cpu.iterkeys():
 
 
 def lookup_asg(server):
-    # what if server is not known? throw away? what happens when a bolt has an exception?
-    # does it get re-executed if transactional? probably
     return server2asg[server]
 
 
@@ -107,8 +105,10 @@ class LookupASGBolt(BaseRichBolt, OtterBase):
 
 class PolicyBolt(BaseRichBolt, OtterBase):
 
-    # There must only be at most one instance per ASG; ensure by
-    # configuring properly in the topology using FieldsGrouping.
+    # IMPORTANT DETAIL:
+    # There must only be at most one instance per ASG to ensure proper
+    # partitioning. Ensure by configuring properly in the topology
+    # using FieldsGrouping.
 
     def prepare(self, conf, context, collector):
         self._collector = collector
@@ -120,8 +120,13 @@ class PolicyBolt(BaseRichBolt, OtterBase):
             for asg, policy in self.policies.iteritems():
                 decision = policy.decide(asg)
                 if decision:
-                    self._collector.emit(t, Values([asg, decision]))  # this might cause too much herding... to be seen
-                    policy.ack_decision()  # FIXME still need to consider transactional semantics
+                    # Obviously it's important that policy decisions
+                    # must be be appropriately throttled, both with an
+                    # ASG and across ASGs. Any such throttling should
+                    # be done here, or in a companion bolt, likely
+                    # *globally*.
+                    self._collector.emit(t, Values([asg, decision]))
+                    policy.ack_decision()
             self._collector.ack(t)
             return
 
@@ -153,13 +158,7 @@ class LogPolicyBolt(BaseRichBolt, OtterBase):
 
 
 def get_topology_builder():
-    # NEXT UP: figure out how to do this in the context of trident or transactional topologies
-    # in general. We know that's feasible, so just experiment for now without those types of guarantees.
-
-    # May want some sort of health checker like this; depends on what MaaS can provide us
-    # builder.setSpout("status-spout", JobStatusSpout(), 4)    # Not certain where this comes from - can we get it from MaaS too?
-
-    # FIXME parallelism numbers are completely arbitrary! this function should take these as optional parameters;
+    # FIXME parallelism numbers are completely arbitrary!
     # however the parallelism is greater than 1 so we can see that proper isolation is being performed
     builder = TopologyBuilder();        
     builder.setSpout("maas-spout", MonitoringSpout(), 4)     # Read from Kafka the monitoring data. Or a file to simulate.
@@ -169,7 +168,7 @@ def get_topology_builder():
     builder.setBolt("policy-bolt", PolicyBolt(), 4)\
            .fieldsGrouping("lookup-asg-bolt", Fields(["asg"]))\
            .fieldsGrouping("scheduler-spout", Fields(["asg"]))\
-    # Write out policy decisions; FIXME at some point, call a webhook in otter
+    # Write out our fake policy decisions
     builder.setBolt("log-policy", LogPolicyBolt()).globalGrouping("policy-bolt")
     return builder
 
